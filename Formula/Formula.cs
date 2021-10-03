@@ -209,13 +209,10 @@ namespace RadonLab {
           //Semaphore.Release();
           if(OldValue.CompareTo(LatestValue) != 0) {//前回値と異なるなら
             if(IsVerbose)
-              Console.WriteLine($"{Stamp:HH:mm:ss.ff} | '{Name}' changed {OldValue}->{LatestValue}");
+              Console.WriteLine($"{Stamp:HH:mm:ss.ff} | '{Name}' changed {OldValue} -> {LatestValue}");
             OnChanged?.Invoke(this, Stamp);//変更を通知
-          } else {//前回値と同じなら
-            if(IsVerbose)
-              Console.WriteLine($"{Stamp:HH:mm:ss.ff} | '{Name}' updated {LatestValue}");
+          } else //前回値と同じなら
             OnUpdated?.Invoke(this, Stamp);//更新を通知
-          }
         }
       }
 
@@ -224,11 +221,11 @@ namespace RadonLab {
       /// </summary>
       /// <param name="NewValue"></param>
       public void SetValue(dynamic value) {
-        Semaphore.Wait();
+        //Semaphore.Wait();
         LatestValue = value != null ? value : LatestValue;//最新値を更新
-        if(IsVerbose)
-          Console.WriteLine($"{DateTime.Now:HH:mm:ss.ff} | '{Name}' renewed {LatestValue}");
-        Semaphore.Release();
+        //if(IsVerbose)
+        //  Console.WriteLine($"{DateTime.Now:HH:mm:ss.ff} | '{Name}' renewed {LatestValue}");
+        //Semaphore.Release();
       }
 
       /// <summary>
@@ -492,10 +489,10 @@ namespace RadonLab {
           #endregion
           #region 数字
           else if(Regex.IsMatch(Character, "[0-9]")) {
-            var Matched=Regex.Match(Expression.Substring(Index), "(?<value>^\\d(\\.[\\d]+([Ee][\\+\\-]?\\d+)?)?)");
+            var Matched = Regex.Match(Expression.Substring(Index), "(?<value>^\\d(\\.[\\d]+([Ee][\\+\\-]?\\d+)?)?)");
             if(Matched.Success) {
               Postfix.Add(new Token("", TokenType.Numeric, double.Parse(Matched.Groups["value"].Value)));
-              Index += Matched.Groups["value"].Length-1;
+              Index += Matched.Groups["value"].Length - 1;
               Pivot = Index + 1;
             }
           }
@@ -544,7 +541,7 @@ namespace RadonLab {
         #endregion
 
         if(IsVerbose)
-          Console.WriteLine($"{DateTime.Now:HH:mm:ss.ff} | {string.Join("", Enumerable.Repeat("  ", Indent))} < {string.Join(",", Postfix.Select(Entry =>Entry.Type== TokenType.Variable?Entry.Name: Entry.Value))}");
+          Console.WriteLine($"{DateTime.Now:HH:mm:ss.ff} | {string.Join("", Enumerable.Repeat("  ", Indent))} < {string.Join(",", Postfix.Select(Entry => Entry.Type == TokenType.Variable ? Entry.Name : Entry.Value))}");
         return Postfix;
       }
 
@@ -858,7 +855,7 @@ namespace RadonLab {
         #endregion
 
         if(IsVerbose)
-          Console.WriteLine($"{DateTime.Now:HH:mm:ss.ff} | {string.Join("", Enumerable.Repeat("  ", Indent))} < {string.Join(";", Postfix.Select(Entry => Entry.Value))}");
+          Console.WriteLine($"{DateTime.Now:HH:mm:ss.ff} | {string.Join("", Enumerable.Repeat("  ", Indent))} < {string.Join(",", Postfix.Select(Entry => Entry.Value))}");
         return Postfix;
       }
 
@@ -880,6 +877,31 @@ namespace RadonLab {
       /// </summary>
       public string Infix {
         get {
+          //if(0 < Tokens.Count) {
+          //  var Rebuilt = Tokens.ToList();
+
+          //  while(1 < Rebuilt.Count) {
+          //    if(IsVerbose)
+          //      Console.WriteLine($"{DateTime.Now:HH:mm:ss.ff} | {string.Join(",", Rebuilt.Select(Entry => Entry.Value))}");
+          //    var Index = Rebuilt.FindIndex(v => v.Type != TokenType.Numeric & v.Type != TokenType.Variable);
+          //    if(Index != -1) {
+          //      var Operator = Rebuilt[Index];
+          //      Token Processed = null;
+          //      if(Operator.Type == TokenType.Operator)
+          //        Processed = new Token("", TokenType.Numeric, $@"({Rebuilt[Index - 2].Value}{Operator.Value}{Rebuilt[Index - 1].Value})");
+          //      else if(Operator.Type == TokenType.Function)
+          //        Processed = new Token("", TokenType.Numeric, $@"{Operator.Value}({string.Join(",", Rebuilt.Skip(Index - Operator.NumberOfFields).Take(Operator.NumberOfFields).Select(v => v.Value))})");
+          //      for(int Jndex = 0; Jndex <= Operator.NumberOfFields; Jndex++)
+          //        Rebuilt.RemoveAt(Index - Operator.NumberOfFields);
+          //      Rebuilt.Insert(Index - Operator.NumberOfFields, Processed);
+          //    }
+          //  }
+
+          //  if(IsVerbose)
+          //    Console.WriteLine($"{DateTime.Now:HH:mm:ss.ff} | {string.Join(",", Rebuilt.Select(Entry => Entry.Value))}");
+          //  return (string)Rebuilt[0].Value;
+          //} else
+          //  return "";
           return "";
         }
       }
@@ -917,9 +939,7 @@ namespace RadonLab {
           Evaluators.Insert(Index - Operator.NumberOfFields, new Token("", TokenType.Logic, Result));
         }
         var OldValue = LatestValue;
-        LatestValue = ((Variable)Evaluators[0].Value).Value;
-        if(IsVerbose)
-          Console.WriteLine($"{DateTime.Now:HH:mm:ss.ff} | '{Expression}' changed {OldValue}->{LatestValue}");
+        LatestValue = (bool)Evaluators[0].Value;
         //Semaphore.Release();
       }
 
@@ -1000,38 +1020,38 @@ namespace RadonLab {
           #endregion
           #region 左辺が変数、右辺が定数
           else if(LeftIndex != -1 & RightIndex == -1) {//左辺が変数、右辺が定数
-            Left = new Variable(Matched.Groups["left"].Value, Parameters[LeftIndex].Value);
+            Left = new Variable(Matched.Groups["left"].Value, Parameters[LeftIndex].Value, IsVerbose);
             Parameters[LeftIndex].OnChanged += Variable_OnChanged;//変更イベントハンドラを登録
             Parameters[LeftIndex].OnUpdated += Variable_OnUpdated;//更新イベントハンドラを登録
             if(Parameters[LeftIndex].Value.GetType() == typeof(double))
-              Right = new Variable("", double.Parse(Matched.Groups["right"].Value));
+              Right = new Variable("", double.Parse(Matched.Groups["right"].Value), IsVerbose);
             else if(Parameters[LeftIndex].Value.GetType() == typeof(DateTime))
-              Right = new Variable("", DateTime.Parse(Matched.Groups["right"].Value));
+              Right = new Variable("", DateTime.Parse(Matched.Groups["right"].Value), IsVerbose);
             else if(Parameters[LeftIndex].Value.GetType() == typeof(bool))
-              Right = new Variable("", Matched.Groups["right"].Value != "" ? bool.Parse(Matched.Groups["right"].Value) : true);
+              Right = new Variable("", Matched.Groups["right"].Value != "" ? bool.Parse(Matched.Groups["right"].Value) : true, IsVerbose);
           }
           #endregion
           #region 左辺が定数、右辺が変数
           else if(LeftIndex == -1 & RightIndex != -1) {//左辺が定数、右辺が変数
-            Right = new Variable(Matched.Groups["right"].Value, Parameters[RightIndex].Value);
+            Right = new Variable(Matched.Groups["right"].Value, Parameters[RightIndex].Value, IsVerbose);
             Parameters[RightIndex].OnChanged += Variable_OnChanged;//変更イベントハンドラを登録
             Parameters[RightIndex].OnUpdated += Variable_OnUpdated;//更新イベントハンドラを登録
             if(Matched.Groups["left"].Value != "") {
               if(Parameters[RightIndex].Value.GetType() == typeof(double))
-                Left = new Variable("", double.Parse(Matched.Groups["left"].Value));
+                Left = new Variable("", double.Parse(Matched.Groups["left"].Value), IsVerbose);
               else if(Parameters[RightIndex].Value.GetType() == typeof(DateTime))
-                Left = new Variable("", DateTime.Parse(Matched.Groups["left"].Value));
+                Left = new Variable("", DateTime.Parse(Matched.Groups["left"].Value), IsVerbose);
               else if(Parameters[RightIndex].Value.GetType() == typeof(bool))
-                Left = new Variable("", bool.Parse(Matched.Groups["left"].Value));
+                Left = new Variable("", bool.Parse(Matched.Groups["left"].Value), IsVerbose);
             }
           }
           #endregion
           #region 両辺が変数
           else if(LeftIndex != -1 & RightIndex != -1) {//両辺が変数
-            Left = new Variable(Matched.Groups["left"].Value, Parameters[LeftIndex].Value);
+            Left = new Variable(Matched.Groups["left"].Value, Parameters[LeftIndex].Value, IsVerbose);
             Parameters[LeftIndex].OnChanged += Variable_OnChanged;//変更イベントハンドラを登録
             Parameters[LeftIndex].OnUpdated += Variable_OnUpdated;//更新イベントハンドラを登録
-            Right = new Variable(Matched.Groups["right"].Value, Parameters[RightIndex].Value);
+            Right = new Variable(Matched.Groups["right"].Value, Parameters[RightIndex].Value, IsVerbose);
             Parameters[RightIndex].OnChanged += Variable_OnChanged;//変更イベントハンドラを登録
             Parameters[RightIndex].OnUpdated += Variable_OnUpdated;//更新イベントハンドラを登録
           }
@@ -1057,11 +1077,11 @@ namespace RadonLab {
       /// <param name="sender"></param>
       /// <param name="e"></param>
       private void Variable_OnChanged(object sender, DateTime e) {
-        if(Left.Name == ((Variable)sender).Name)
-          Left.Value = ((Variable)sender).Value;
-        if(Right.Name == ((Variable)sender).Name)
-          Right.Value = ((Variable)sender).Value;
         var OldValue = base.Value;
+        if(Left.Name == ((Variable)sender).Name)
+          Left.SetValue(((Variable)sender).Value);
+        if(Right.Name == ((Variable)sender).Name)
+          Right.SetValue(((Variable)sender).Value);
         Evaluate();
         if(OldValue != base.Value)
           OnChanged?.Invoke(this, DateTime.Now);
@@ -1179,7 +1199,7 @@ namespace RadonLab {
       /// <param name="IsVerbose"></param>
       public Trigger(string Expression, IEnumerable<Variable> Parameters, bool IsVerbose = false) : base(Expression, IsVerbose) {
         foreach(var Token in Tokens.Where(Token => Token.Type == TokenType.Logic)) {//トークン中の論理式について
-          Token.Value = new Comparable(Token.Name, Parameters.ToList());
+          Token.Value = new Comparable(Token.Name, Parameters.ToList(), IsVerbose);
           ((Comparable)Token.Value).OnChanged += Comparable_OnChanged;
           ((Comparable)Token.Value).OnUpdated += Comparable_OnUpdated;
         }
@@ -1232,8 +1252,6 @@ namespace RadonLab {
 
         var OldValue = LatestValue;
         LatestValue = Evaluators[0].Value;
-        if(OldValue != LatestValue && IsVerbose)
-          Console.WriteLine($"{DateTime.Now:HH:mm:ss.ff} | '{Expression}' changed {OldValue}->{LatestValue}");
         //Semaphore.Release();
       }
 
@@ -1260,7 +1278,8 @@ namespace RadonLab {
         var OldValue = base.Value;
         Evaluate();
         if(OldValue != base.Value) {
-          Console.WriteLine($"{e:HH:mm:ss.ff} | '{((Comparable)sender).Name}' changed");
+          if(IsVerbose)
+            Console.WriteLine($"{e:HH:mm:ss.ff} | '{Expression}' changed {OldValue} -> {LatestValue}");
           OnChanged?.Invoke(this, e);
         }
       }
@@ -1271,9 +1290,121 @@ namespace RadonLab {
       /// <param name="sender"></param>
       /// <param name="e"></param>
       private void Comparable_OnUpdated(object sender, DateTime e) {
-        if(IsVerbose)
-          Console.WriteLine($"{e:HH:mm:ss.ff} | '{((Comparable)sender).Name}' updated");
         OnUpdated?.Invoke(this, e);
+      }
+
+    }
+
+    //====================================================
+
+    /// <summary>
+    /// 使い方のデモを提供します
+    /// </summary>
+    public static class Demo {
+
+      /// <summary>
+      /// Mathematicalのデモを行います
+      /// </summary>
+      public static void Mathematical(bool IsVerbose = false) {
+        var Expression = "(height-offset)*exp(-x/4.53E-13)+offset";
+        var WorkExpression = Regex.Replace(Expression.ToLower(), "\\s", "");//小文字化して空白を除去する。日時形式の文字列は想定していない
+        var Calculator = new Mathematical(WorkExpression, IsVerbose);
+
+        if(IsVerbose) {
+          Console.WriteLine(Calculator.Postfix);
+          Console.WriteLine(Calculator.Infix);
+          foreach(var Item in Calculator.Tokens)
+            Console.WriteLine(Item);
+        }
+
+        var Result = Calculator.Evaluate(3.0, new List<(string, double)> { ("height", 5.0), ("decay", 1.5), ("offset", 0.5) });
+
+        Console.WriteLine($"{DateTime.Now:HH:mm:ss.ff} | '{Expression}' = {Result}\n");
+      }
+
+      /// <summary>
+      /// Logicalのデモを行います
+      /// </summary>
+      public static void Logic(bool IsVerbose = false) {
+        var Expression = "TickTimer>=5 | 25.5<Temperature | !(WaterLevel>=1.05E+2) | 2021/09/30T23:00:00<Stamp";
+        var WorkExpression = Regex.Replace(Expression, "\\s", "");//空白を除去する
+        var Verifier = new Logical(WorkExpression, IsVerbose);
+
+        if(IsVerbose) {
+          Console.WriteLine(Verifier.Postfix);
+          Console.WriteLine(Verifier.Infix);
+          foreach(var Item in Verifier.Tokens)
+            Console.WriteLine(Item);
+        }
+
+        var Result = Verifier.Evaluate(new List<(string, bool)> {
+        ("TickTimer>=5",false),
+        ("25.5<Temperature",false),
+        ("WaterLevel>=1.05E+2",false),
+        ("2021/09/30T23:00:00<Stamp",true)
+      });
+
+        Console.WriteLine($"{DateTime.Now:HH:mm:ss.ff} | '{Expression}' = {Result}\n");
+      }
+
+      //----------------------------------------------------
+
+      #region Triggerデモで使用する変数
+      static System.Timers.Timer Timer = new System.Timers.Timer(500);//タイマを保持します
+      static DateTime Origin = DateTime.Now;//開始時刻を保持します
+      static Random Randomizer = new Random((int)DateTime.Now.ToOADate());//乱数発生器を保持します
+
+      static Variable TickTime = new Variable("TickTime", 0.0);//経過時間を保持します
+      static Variable Temperature = new Variable("Temperature", 30.0);//温度値を保持します
+      static Variable WaterLevel = new Variable("WaterLevel", 0.0);//水位値を保持します
+      static ManualResetEvent Completed = new ManualResetEvent(false);//リセットイベントを保持します
+      #endregion
+
+      /// <summary>
+      /// Triggerのデモを行います
+      /// </summary>
+      public static void Trigger(bool IsVerbose = false) {
+        Timer.Elapsed += Timer_Elapsed;//タイマイベントハンドラを登録します
+
+        TickTime.IsVerbose = IsVerbose;
+        Temperature.IsVerbose = IsVerbose;
+        WaterLevel.IsVerbose = IsVerbose;
+        var Trigger = new Trigger(
+          "(WaterLevel>=5|Temperature<20.0)&10<TickTime",
+          new List<Variable> { WaterLevel, Temperature, TickTime },
+          IsVerbose);//トリガを生成します
+        Trigger.OnChanged += Trigger_OnChanged;//トリガイベントハンドラを登録します
+
+        if(IsVerbose)
+          Console.WriteLine($"{DateTime.Now:HH:mm:ss.ff} | Trigger started");
+
+        Timer.Start();//タイマを開始します
+        Completed.WaitOne();//トリガイベントを待機します
+        Console.WriteLine($"{DateTime.Now:HH:mm:ss.ff} | Triggered\n");
+
+        Trigger.OnChanged -= Trigger_OnChanged;//トリガイベントハンドラを解除します
+      }
+
+      /// <summary>
+      /// タイマイベントを処理します
+      /// </summary>
+      /// <param name="sender"></param>
+      /// <param name="e"></param>
+      static void Timer_Elapsed(object sender, System.Timers.ElapsedEventArgs e) {
+        Console.WriteLine();
+        TickTime.Value = (DateTime.Now - Origin).TotalSeconds;//経過時間を更新します
+        Temperature.Value -= Randomizer.NextDouble();//温度を更新します
+        WaterLevel.Value += Randomizer.NextDouble();//水位を更新します
+      }
+
+      /// <summary>
+      /// トリガーイベントを処理します
+      /// </summary>
+      /// <param name="sender"></param>
+      /// <param name="e"></param>
+      static void Trigger_OnChanged(object sender, DateTime e) {
+        Timer.Stop();//タイマを停止します
+        Completed.Set();//リセットイベントをセットします
       }
 
     }
