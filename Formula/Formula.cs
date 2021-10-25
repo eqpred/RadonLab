@@ -320,7 +320,7 @@ namespace RadonLab {
     /// <remarks>http://7ujm.net/etc/calcstart.html</remarks>
     public class Mathematical {
       /// <summary>
-      /// 途中処理を表示します
+      /// 詳細モードを取得または設定します
       /// </summary>
       public bool IsVerbose { get; set; } = false;
       /// <summary>
@@ -370,7 +370,7 @@ namespace RadonLab {
       /// <param name="Operator"></param>
       private int Priority(string Operator) {
         switch(Operator) {
-          case "*": return 3;
+          case "*": return 2;
           case "/": return 2;
           case "+": return 1;
           case "-": return 1;
@@ -624,6 +624,106 @@ namespace RadonLab {
         Parameters.ToList().ForEach(Parameter => {
           this.Variables[Parameter.Name]?.Indices.ForEach(Index => Evaluators[Index].Value = Parameter.Value);
         });
+
+        #region 計算を実行します
+        while(1 < Evaluators.Count) {//トークンが1個になるまで
+          var Operator = Evaluators.Find(Item => Item.Type == TokenType.Operator | Item.Type == TokenType.Function);//先頭の演算子または関数を探す
+          var Index = Evaluators.IndexOf(Operator);//そのインデックス
+          double Result = double.NaN;//計算結果のバッファ
+          #region 四則演算
+          if(Operator.Type == TokenType.Operator) //四則演算なら
+            switch(Operator.Value) {
+              case "+": Result = Evaluators[Index - 2].Value + Evaluators[Index - 1].Value; break;
+              case "-": Result = Evaluators[Index - 2].Value - Evaluators[Index - 1].Value; break;
+              case "*": Result = Evaluators[Index - 2].Value * Evaluators[Index - 1].Value; break;
+              case "/": Result = Evaluators[Index - 1].Value != 0 ? Evaluators[Index - 2].Value / Evaluators[Index - 1].Value : double.NaN; break;
+            }
+          #endregion
+          #region 関数計算
+          if(Operator.Type == TokenType.Function) //関数なら
+            switch(Operator.Value.ToLower()) {
+              case "power":
+              case "pow": Result = Math.Pow((double)Evaluators[Index - 2].Value, (double)Evaluators[Index - 1].Value); break;
+              case "mod": Result = (double)Evaluators[Index - 1].Value != 0 ? (double)Evaluators[Index - 2].Value % (double)Evaluators[Index - 1].Value : double.NaN; break;
+              case "exp": Result = Math.Exp((double)Evaluators[Index - 1].Value); break;
+              case "log": Result = (double)Evaluators[Index - 1].Value > 0 ? Math.Log10((double)Evaluators[Index - 1].Value) : double.NaN; break;
+              case "ln": Result = (double)Evaluators[Index - 1].Value > 0 ? Math.Log((double)Evaluators[Index - 1].Value) : double.NaN; break;
+              case "sqrt": Result = (double)Evaluators[Index - 1].Value >= 0 ? Math.Sqrt((double)Evaluators[Index - 1].Value) : double.NaN; break;
+              case "abs": Result = Math.Abs((double)Evaluators[Index - 1].Value); break;
+              case "sin": Result = Math.Sin((double)Evaluators[Index - 1].Value); break;
+              case "cos": Result = Math.Cos((double)Evaluators[Index - 1].Value); break;
+              case "tan": Result = Math.Tan((double)Evaluators[Index - 1].Value); break;
+              case "asin": Result = Math.Asin((double)Evaluators[Index - 1].Value); break;
+              case "acos": Result = Math.Acos((double)Evaluators[Index - 1].Value); break;
+              case "atan": Result = Math.Atan((double)Evaluators[Index - 1].Value); break;
+              case "sinh": Result = Math.Sinh((double)Evaluators[Index - 1].Value); break;
+              case "cosh": Result = Math.Cosh((double)Evaluators[Index - 1].Value); break;
+              case "tanh": Result = Math.Tanh((double)Evaluators[Index - 1].Value); break;
+              case "truncate": Result = Math.Truncate((double)Evaluators[Index - 1].Value); break;
+              case "floor": Result = Math.Floor((double)Evaluators[Index - 1].Value); break;
+              case "ceiling": Result = Math.Ceiling((double)Evaluators[Index - 1].Value); break;
+              case "round": Result = Math.Round((double)Evaluators[Index - 1].Value); break;
+              case "sign": Result = Math.Sign((double)Evaluators[Index - 1].Value); break;
+              case "pi": Result = Math.PI; break;//円周率
+              case "e": Result = Math.E; break;//自然対数の底
+              case "c": Result = 2.99792458E8; break;//光速 m/s
+              case "kb": Result = 1.380649E-23; break;//ボルツマン定数 J/K
+              case "na": Result = 6.02214076E23; break;//アボガドロ数 /mol
+              //以下は特殊処理
+              case "sinc": Result = (double)Evaluators[Index - 1].Value != 0 ? Math.Sin((double)Evaluators[Index - 1].Value) / (double)Evaluators[Index - 1].Value : double.NaN; break;
+              case "decay": Result = (double)Evaluators[Index - 1].Value != 0 ? (double)Evaluators[Index - 2].Value * Math.Exp(-(double)Evaluators[Index - 3].Value / (double)Evaluators[Index - 1].Value) : double.NaN; break;
+              case "stretched":
+                a = (double)Evaluators[Index - 3].Value;
+                b = (double)Evaluators[Index - 2].Value;
+                c = (double)Evaluators[Index - 1].Value;
+                Result = b != 0 ? a * Math.Exp(-Math.Pow((double)Evaluators[Index - 4].Value, c) / b) : double.NaN;
+                break;
+              case "gauss":
+                a = (double)Evaluators[Index - 3].Value;
+                b = (double)Evaluators[Index - 2].Value;
+                c = (double)Evaluators[Index - 1].Value;
+                Result = c != 0 ? a / (Math.Sqrt(2 * Math.PI) * c) * Math.Exp(-Math.Pow(((double)Evaluators[Index - 4].Value - b) / c, 2) / 2) : double.NaN;
+                break;
+              case "lorentz":
+                a = (double)Evaluators[Index - 3].Value;
+                b = (double)Evaluators[Index - 2].Value;
+                c = (double)Evaluators[Index - 1].Value;
+                Result = a / Math.PI * c / (Math.Pow((double)Evaluators[Index - 4].Value - b, 2) + Math.Pow(c, 2));
+                break;
+              case "foigt":
+                a = (double)Evaluators[Index - 4].Value;
+                b = (double)Evaluators[Index - 3].Value;
+                c = (double)Evaluators[Index - 2].Value;
+                d = (double)Evaluators[Index - 1].Value;
+                Result = a * (d / (Math.Sqrt(2 * Math.PI) * c) * Math.Exp(-Math.Pow(((double)Evaluators[Index - 5].Value - b) / c, 2) / 2) + //Gauss part
+                         (1 - d) / Math.PI * c / (Math.Pow((double)Evaluators[Index - 5].Value - b, 2) + Math.Pow(c, 2))); //Lorentz part
+                break;
+            }
+          #endregion
+          for(int Jndex = 0; Jndex <= Operator.NumberOfFields; Jndex++)
+            Evaluators.RemoveAt(Index - Operator.NumberOfFields);
+          Evaluators.Insert(Index - Operator.NumberOfFields, new Token("", TokenType.Numeric, Result));//計算結果を格納する
+        }
+        #endregion
+
+        if(IsVerbose)
+          Console.WriteLine($"{DateTime.Now:HH:mm:ss.ff} | '{string.Join(",", this.Tokens.Select(Item => Item.Value))}' = {Evaluators[0].Value}");
+        return Evaluators[0].Value;
+      }
+
+      /// <summary>
+      /// 数式を計算します
+      /// </summary>
+      /// <param name="X"></param>
+      /// <param name="Parameters"></param>
+      /// <returns></returns>
+      public double Evaluate(double X, IEnumerable<double> Parameters = null) {
+        double a, b, c, d;//特殊関数用変数
+        var Evaluators = this.Tokens.ToList();
+
+        this.Variables["x"].Indices.ForEach(Index => Evaluators[Index].Value = X);
+        for(int Index=0; Index<Parameters.Count(); Index++)
+          Evaluators[Index].Value = Parameters.ElementAt(Index);
 
         #region 計算を実行します
         while(1 < Evaluators.Count) {//トークンが1個になるまで
