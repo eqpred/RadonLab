@@ -7,6 +7,7 @@ namespace RadonLab {
 
   /// <summary>
   /// パラメータの値を最適化します
+  /// <remarks>ここで使用するコードは、NumercalRecipes in C を移植したものです。詳しくは<see href="http://numerical.recipes/"/>をご覧ください。</remarks>
   /// </summary>
   public class Optimization {
     /// <summary>
